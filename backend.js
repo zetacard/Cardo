@@ -1,35 +1,109 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// STEP 1: Replace these two placeholders with your Cardo project values.
-const SUPABASE_URL = "https://hllyxtpdnqtmbhdqxkds.supabase.co";
-const SUPABASE_ANON_KEY =
-  "sb_publishable_mnwLIapJtIDwM-DwmI4hRA_7FU9FhlB";
+/*
+ * Cardo — Backend connection
+ * Copyright (c) 2026 Cardo. All rights reserved.
+ *
+ * IMPORTANT:
+ * Replace BOTH configuration placeholders below with your actual
+ * Supabase Project URL and publishable (or legacy anon) key.
+ *
+ * NEVER put a Supabase service_role or secret key in frontend code.
+ */
 
-const isConfigured =
-  SUPABASE_URL.startsWith("https://") &&
-  !SUPABASE_URL.includes("https://hllyxtpdnqtmbhdqxkds.supabase.co") &&
-  SUPABASE_ANON_KEY.length > 20 &&
-  !SUPABASE_ANON_KEY.includes("sb_publishable_mnwLIapJtIDwM-DwmI4hRA_7FU9FhlB");
+const SUPABASE_URL = "PASTE_YOUR_REAL_SUPABASE_PROJECT_URL_HERE".trim();
+const SUPABASE_ANON_KEY =
+  "PASTE_YOUR_REAL_SUPABASE_PUBLISHABLE_OR_ANON_KEY_HERE".trim();
+
+function validateConfiguration(url, key) {
+  if (!url || !key) return false;
+
+  if (
+    url.includes("PASTE_YOUR") ||
+    key.includes("PASTE_YOUR") ||
+    key.length < 20
+  ) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+
+    return (
+      parsed.protocol === "https:" &&
+      Boolean(parsed.hostname) &&
+      !parsed.username &&
+      !parsed.password
+    );
+  } catch {
+    return false;
+  }
+}
+
+const isConfigured = validateConfiguration(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
 
 export const supabase = isConfigured
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  ? createClient(SUPABASE_URL.replace(/\/+$/, ""), SUPABASE_ANON_KEY, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
-      },
+        detectSessionInUrl: true
+      }
     })
   : null;
 
-function requireSupabase() {
+export function getBackendStatus() {
+  return {
+    configured: Boolean(isConfigured && supabase),
+    provider: "Supabase",
+    message:
+      isConfigured && supabase
+        ? "Supabase configuration is present."
+        : "Add your real Supabase project URL and publishable key in backend.js."
+  };
+}
+
+function requireBackend() {
   if (!supabase) {
     throw new Error(
-      "Cardo backend is not configured. Add your Supabase URL and publishable key in backend.js."
+      "Cardo cannot connect because Supabase is not configured. " +
+      "Check the URL and publishable key in backend.js."
     );
   }
 
   return supabase;
+}
+
+function throwIfError(error) {
+  if (error) {
+    throw new Error(error.message || "The Supabase request failed.");
+  }
+}
+
+function validateEmail(email) {
+  const value = String(email ?? "").trim().toLowerCase();
+
+  if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    throw new Error("Enter a valid email address.");
+  }
+
+  return value;
+}
+
+function validatePassword(password) {
+  if (typeof password !== "string" || password.length < 8) {
+    throw new Error("Your password must contain at least 8 characters.");
+  }
+
+  return password;
+}
+
+function cleanText(value, maxLength, fallback = "") {
+  return String(value ?? fallback).trim().slice(0, maxLength);
 }
 
 function validateDesignType(type) {
@@ -38,135 +112,115 @@ function validateDesignType(type) {
     "invitation",
     "menu",
     "poster",
-    "social_post",
+    "social_post"
   ];
 
   if (!allowed.includes(type)) {
-    throw new Error("Invalid design type.");
+    throw new Error("Choose a supported Cardo design category.");
   }
+
+  return type;
 }
 
-function validateTitle(title) {
-  const cleanTitle = String(title || "Untitled design").trim();
-
-  if (!cleanTitle) {
-    return "Untitled design";
-  }
-
-  if (cleanTitle.length > 120) {
-    throw new Error("Design title must be 120 characters or fewer.");
-  }
-
-  return cleanTitle;
-}
-
-function validateContent(content) {
-  if (
-    content === null ||
-    typeof content !== "object" ||
-    Array.isArray(content)
-  ) {
-    throw new Error("Design content must be a JSON object.");
-  }
-
-  // Prevent accidentally storing excessively large documents.
-  if (JSON.stringify(content).length > 500_000) {
-    throw new Error("This design is too large to save.");
-  }
-
-  return content;
-}
-
-// BACKEND STATUS
-export function getBackendStatus() {
-  return {
-    configured: Boolean(supabase),
-    provider: "Supabase",
-    message: supabase
-      ? "Cardo backend is configured."
-      : "Add your Supabase URL and publishable key in backend.js.",
-  };
-}
-
-// AUTHENTICATION
-export async function signUp(email, password, displayName = "") {
-  const client = requireSupabase();
-  const cleanEmail = String(email || "").trim().toLowerCase();
-  const cleanName = String(displayName || "").trim();
-
-  if (!cleanEmail || !cleanEmail.includes("@")) {
-    throw new Error("Enter a valid email address.");
-  }
-
-  if (String(password || "").length < 8) {
-    throw new Error("Password must contain at least 8 characters.");
-  }
-
-  if (cleanName.length > 80) {
-    throw new Error("Name must be 80 characters or fewer.");
-  }
-
-  const { data, error } = await client.auth.signUp({
-    email: cleanEmail,
-    password,
-    options: {
-      data: {
-        display_name: cleanName,
-      },
-    },
-  });
-
-  if (error) throw error;
-
-  return data;
-}
-
-export async function signIn(email, password) {
-  const client = requireSupabase();
-
-  const { data, error } = await client.auth.signInWithPassword({
-    email: String(email || "").trim().toLowerCase(),
-    password,
-  });
-
-  if (error) throw error;
-
-  return data;
-}
-
-export async function signOut() {
-  const client = requireSupabase();
-  const { error } = await client.auth.signOut();
-
-  if (error) throw error;
-
-  return true;
-}
-
-export async function getCurrentUser() {
-  const client = requireSupabase();
+async function requireUser() {
+  const client = requireBackend();
   const { data, error } = await client.auth.getUser();
 
-  if (error) throw error;
+  throwIfError(error);
+
+  if (!data?.user) {
+    throw new Error("Please sign in to continue.");
+  }
 
   return data.user;
 }
 
-export async function getCurrentSession() {
-  const client = requireSupabase();
-  const { data, error } = await client.auth.getSession();
+/* =========================
+   AUTHENTICATION
+========================= */
 
-  if (error) throw error;
+export async function signUp(email, password, displayName = "") {
+  const client = requireBackend();
+  const cleanEmail = validateEmail(email);
+  const cleanPassword = validatePassword(password);
+  const cleanName = cleanText(displayName, 80);
 
-  return data.session;
+  const { data, error } = await client.auth.signUp({
+    email: cleanEmail,
+    password: cleanPassword,
+    options: {
+      data: {
+        display_name: cleanName
+      }
+    }
+  });
+
+  throwIfError(error);
+
+  return {
+    user: data?.user ?? null,
+    session: data?.session ?? null,
+    needsEmailConfirmation: Boolean(data?.user && !data?.session)
+  };
 }
 
-// PROFILE
-export async function getMyProfile() {
-  const client = requireSupabase();
-  const user = await getCurrentUser();
+export async function signIn(email, password) {
+  const client = requireBackend();
+  const cleanEmail = validateEmail(email);
 
-  if (!user) throw new Error("Please sign in first.");
+  if (!password) {
+    throw new Error("Enter your password.");
+  }
+
+  const { data, error } = await client.auth.signInWithPassword({
+    email: cleanEmail,
+    password
+  });
+
+  throwIfError(error);
+
+  if (!data?.session || !data?.user) {
+    throw new Error("Sign-in did not return an active session.");
+  }
+
+  return data.user;
+}
+
+export async function signOut() {
+  const client = requireBackend();
+  const { error } = await client.auth.signOut();
+
+  throwIfError(error);
+  return true;
+}
+
+export async function getCurrentUser() {
+  const client = requireBackend();
+  const { data, error } = await client.auth.getUser();
+
+  if (error) {
+    if (error.name === "AuthSessionMissingError") return null;
+    throwIfError(error);
+  }
+
+  return data?.user ?? null;
+}
+
+export async function getCurrentSession() {
+  const client = requireBackend();
+  const { data, error } = await client.auth.getSession();
+
+  throwIfError(error);
+  return data?.session ?? null;
+}
+
+/* =========================
+   USER PROFILE
+========================= */
+
+export async function getMyProfile() {
+  const client = requireBackend();
+  const user = await requireUser();
 
   const { data, error } = await client
     .from("profiles")
@@ -174,116 +228,151 @@ export async function getMyProfile() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (error) throw error;
+  throwIfError(error);
 
-  return data;
+  if (data) return data;
+
+  // The profile trigger may not have run for an older account.
+  const { data: created, error: createError } = await client
+    .from("profiles")
+    .upsert(
+      {
+        id: user.id,
+        display_name: cleanText(
+          user.user_metadata?.display_name,
+          80
+        )
+      },
+      { onConflict: "id" }
+    )
+    .select("*")
+    .single();
+
+  throwIfError(createError);
+  return created;
 }
 
-export async function updateMyProfile(updates = {}) {
-  const client = requireSupabase();
-  const user = await getCurrentUser();
+export async function updateMyProfile({ display_name, username } = {}) {
+  const client = requireBackend();
+  const user = await requireUser();
+  const updates = {
+    updated_at: new Date().toISOString()
+  };
 
-  if (!user) throw new Error("Please sign in first.");
-
-  const safeUpdates = {};
-
-  if (typeof updates.display_name === "string") {
-    safeUpdates.display_name = updates.display_name.trim().slice(0, 80);
+  if (display_name !== undefined) {
+    updates.display_name = cleanText(display_name, 80);
   }
 
-  if (typeof updates.username === "string") {
-    const username = updates.username.trim().toLowerCase();
+  if (username !== undefined) {
+    const cleanUsername = cleanText(username, 30).toLowerCase();
 
-    if (username && !/^[a-z0-9_]{3,30}$/.test(username)) {
+    if (
+      cleanUsername &&
+      !/^[a-z0-9_]{3,30}$/.test(cleanUsername)
+    ) {
       throw new Error(
-        "Username must be 3–30 characters and contain only letters, numbers, or underscores."
+        "Username must be 3–30 characters using letters, numbers, or underscores."
       );
     }
 
-    safeUpdates.username = username || null;
+    updates.username = cleanUsername || null;
   }
-
-  if (Object.keys(safeUpdates).length === 0) {
-    throw new Error("No valid profile changes were provided.");
-  }
-
-  safeUpdates.updated_at = new Date().toISOString();
 
   const { data, error } = await client
     .from("profiles")
-    .update(safeUpdates)
+    .update(updates)
     .eq("id", user.id)
-    .select()
+    .select("*")
     .single();
 
-  if (error) throw error;
-
+  throwIfError(error);
   return data;
 }
 
-// SAVE A NEW DESIGN OR UPDATE AN EXISTING DESIGN
+/* =========================
+   DESIGNS
+========================= */
+
 export async function saveDesign({
-  id = null,
-  title = "Untitled design",
+  id,
+  title,
   design_type = "business_card",
   content = {},
-  is_public = false,
+  is_public = false
 } = {}) {
-  const client = requireSupabase();
-  const user = await getCurrentUser();
+  const client = requireBackend();
+  const user = await requireUser();
 
-  if (!user) throw new Error("Please sign in to save designs.");
+  const cleanTitle = cleanText(title, 120, "Untitled design");
 
-  validateDesignType(design_type);
+  if (!cleanTitle) {
+    throw new Error("Enter a title for your design.");
+  }
 
-  const record = {
+  const cleanType = validateDesignType(design_type);
+
+  if (
+    content === null ||
+    typeof content !== "object" ||
+    Array.isArray(content)
+  ) {
+    throw new Error("Design content must be a valid object.");
+  }
+
+  let serialized;
+
+  try {
+    serialized = JSON.stringify(content);
+  } catch {
+    throw new Error("Design content could not be processed.");
+  }
+
+  if (serialized.length > 500_000) {
+    throw new Error("This design is too large to save.");
+  }
+
+  const payload = {
     user_id: user.id,
-    title: validateTitle(title),
-    design_type,
-    content: validateContent(content),
-    // Public sharing must not be enabled accidentally.
-    is_public: is_public === true,
-    updated_at: new Date().toISOString(),
+    title: cleanTitle,
+    design_type: cleanType,
+    content,
+    is_public: Boolean(is_public),
+    updated_at: new Date().toISOString()
   };
 
   if (id) {
     const { data, error } = await client
       .from("designs")
-      .update(record)
+      .update(payload)
       .eq("id", id)
       .eq("user_id", user.id)
-      .select()
+      .select("*")
       .single();
 
-    if (error) throw error;
-
+    throwIfError(error);
     return data;
   }
 
   const { data, error } = await client
     .from("designs")
-    .insert(record)
-    .select()
+    .insert(payload)
+    .select("*")
     .single();
 
-  if (error) throw error;
-
+  throwIfError(error);
   return data;
 }
 
-// LOAD THE SIGNED-IN USER'S DESIGNS
 export async function loadDesigns({
-  design_type = null,
-  limit = 50,
+  design_type,
+  limit = 100
 } = {}) {
-  const client = requireSupabase();
-  const user = await getCurrentUser();
+  const client = requireBackend();
+  const user = await requireUser();
 
-  if (!user) throw new Error("Please sign in to view your designs.");
-
-  const safeLimit = Math.min(
-    100,
-    Math.max(1, Number.parseInt(limit, 10) || 50)
+  const safeLimit = Math.max(
+    1,
+    Math.min(100, Number.parseInt(limit, 10) || 100)
   );
 
   let query = client
@@ -294,57 +383,57 @@ export async function loadDesigns({
     .limit(safeLimit);
 
   if (design_type) {
-    validateDesignType(design_type);
-    query = query.eq("design_type", design_type);
+    query = query.eq(
+      "design_type",
+      validateDesignType(design_type)
+    );
   }
 
   const { data, error } = await query;
 
-  if (error) throw error;
-
-  return data || [];
+  throwIfError(error);
+  return data ?? [];
 }
 
-// LOAD ONE DESIGN
 export async function getDesign(id) {
-  const client = requireSupabase();
-  const user = await getCurrentUser();
+  if (!id) throw new Error("A design ID is required.");
 
-  if (!user) throw new Error("Please sign in first.");
-  if (!id) throw new Error("Design ID is required.");
+  const client = requireBackend();
+  const user = await requireUser();
 
   const { data, error } = await client
     .from("designs")
     .select("*")
     .eq("id", id)
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (error) throw error;
+  throwIfError(error);
+
+  if (!data) {
+    throw new Error("Design not found or you do not have access.");
+  }
 
   return data;
 }
 
-// DELETE A DESIGN
 export async function deleteDesign(id) {
-  const client = requireSupabase();
-  const user = await getCurrentUser();
+  if (!id) throw new Error("A design ID is required.");
 
-  if (!user) throw new Error("Please sign in first.");
-  if (!id) throw new Error("Design ID is required.");
+  const client = requireBackend();
+  const user = await requireUser();
 
   const { data, error } = await client
     .from("designs")
     .delete()
     .eq("id", id)
     .eq("user_id", user.id)
-    .select("id")
-    .maybeSingle();
+    .select("id");
 
-  if (error) throw error;
+  throwIfError(error);
 
-  if (!data) {
-    throw new Error("Design not found or you do not have permission to delete it.");
+  if (!data?.length) {
+    throw new Error("Design not found or it could not be deleted.");
   }
 
   return true;
