@@ -12,8 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  * NEVER put a Supabase service_role or secret key in frontend code.
  */
 
-const SUPABASE_URL = "https://hllyxtpdnqtmbhdqxkds.supabase.co
-".trim();
+const SUPABASE_URL = "https://hllyxtpdnqtmbhdqxkds.supabase.co".trim();
 const SUPABASE_ANON_KEY =
   "sb_publishable_mnwLIapJtIDwM-DwmI4hRA_7FU9FhlB".trim();
 
