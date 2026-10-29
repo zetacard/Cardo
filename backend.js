@@ -8,9 +8,9 @@ const SUPABASE_ANON_KEY =
 
 const isConfigured =
   SUPABASE_URL.startsWith("https://") &&
-  !SUPABASE_URL.includes("PASTE_YOUR") &&
+  !SUPABASE_URL.includes("https://hllyxtpdnqtmbhdqxkds.supabase.co") &&
   SUPABASE_ANON_KEY.length > 20 &&
-  !SUPABASE_ANON_KEY.includes("PASTE_YOUR");
+  !SUPABASE_ANON_KEY.includes("sb_publishable_mnwLIapJtIDwM-DwmI4hRA_7FU9FhlB");
 
 export const supabase = isConfigured
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
