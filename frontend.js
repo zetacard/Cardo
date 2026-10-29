@@ -1,4 +1,15 @@
+import {
+  getBackendStatus,
+  signIn,
+  signUp,
+  signOut,
+  getCurrentUser
+} from "./backend.js";
 
+import {
+  showError,
+  showSuccess
+} from "./error-handler.js";
 const main = document.querySelector("#main-content");
 
 if (main) {
