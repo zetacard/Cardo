@@ -2,9 +2,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // STEP 1: Replace these two placeholders with your Cardo project values.
-const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
+const SUPABASE_URL = "https://hllyxtpdnqtmbhdqxkds.supabase.co";
 const SUPABASE_ANON_KEY =
-  "PASTE_YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY_HERE";
+  "sb_publishable_mnwLIapJtIDwM-DwmI4hRA_7FU9FhlB";
 
 const isConfigured =
   SUPABASE_URL.startsWith("https://") &&
