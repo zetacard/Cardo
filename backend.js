@@ -12,16 +12,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  * NEVER put a Supabase service_role or secret key in frontend code.
  */
 
-const SUPABASE_URL = "PASTE_YOUR_REAL_SUPABASE_PROJECT_URL_HERE".trim();
+const SUPABASE_URL = "https://hllyxtpdnqtmbhdqxkds.supabase.co
+".trim();
 const SUPABASE_ANON_KEY =
-  "PASTE_YOUR_REAL_SUPABASE_PUBLISHABLE_OR_ANON_KEY_HERE".trim();
+  "sb_publishable_mnwLIapJtIDwM-DwmI4hRA_7FU9FhlB".trim();
 
 function validateConfiguration(url, key) {
   if (!url || !key) return false;
 
   if (
-    url.includes("PASTE_YOUR") ||
-    key.includes("PASTE_YOUR") ||
+    url.includes("https://hllyxtpdnqtmbhdqxkds.supabase.co") ||
+    key.includes("sb_publishable_mnwLIapJtIDwM-DwmI4hRA_7FU9FhlB") ||
     key.length < 20
   ) {
     return false;
